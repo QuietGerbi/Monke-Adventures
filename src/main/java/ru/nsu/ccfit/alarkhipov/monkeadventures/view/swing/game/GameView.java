@@ -7,7 +7,9 @@ import ru.nsu.ccfit.alarkhipov.monkeadventures.view.swing.weapons.MagicStaffSwin
 
 import javax.swing.*;
 
+import java.awt.*;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
@@ -26,6 +28,7 @@ public class GameView implements Observer<ArrayList<Float>>  {
             frame.setTitle("Monke Adventures");
             frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
             playerSwing.setOpaque(false);
+            loadIcon();
             worldSwing.setPlayer(playerSwing);
             worldSwing.setStaff(staffSwing);
             frame.add(worldSwing);
@@ -33,6 +36,18 @@ public class GameView implements Observer<ArrayList<Float>>  {
             frame.setVisible(true);
             worldSwing.update(playerSwing.getX(), playerSwing.getY());
         });
+    }
+
+    public void loadIcon(){
+        try {
+            Image icon = Toolkit.getDefaultToolkit().getImage(
+                    getClass().getResource("/appIcon.png")
+            );
+            frame.setIconImage(icon);
+            frame.setIconImages(java.util.List.of(icon));
+        } catch (Exception e) {
+            //
+        }
     }
 
     @Override

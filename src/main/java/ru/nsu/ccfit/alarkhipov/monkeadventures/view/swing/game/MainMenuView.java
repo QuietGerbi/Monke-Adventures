@@ -23,6 +23,7 @@ public class MainMenuView {
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setResizable(true);
             frame.setBounds(dimension.width/2-400, dimension.height/2-320, 1920, 1080);
+            loadIcon();
             frame.setLocationRelativeTo(null);
 
             BackgroundPanel mainPanel = new BackgroundPanel();
@@ -82,20 +83,15 @@ public class MainMenuView {
         return btn;
     }
 
-    private static class BackgroundPanel extends JPanel {
-        private final Image background;
-
-        public BackgroundPanel() {
-            background = new ImageIcon(Objects.requireNonNull(getClass().getResource("/backgrounds/background.jpg"))).getImage();
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            if (background != null) {
-                g.drawImage(background, 0, 0, getWidth(), getHeight(), this);
-            }
+    public void loadIcon(){
+        try {
+            Image icon = Toolkit.getDefaultToolkit().getImage(
+                    getClass().getResource("/appIcon.png")
+            );
+            frame.setIconImage(icon);
+            frame.setIconImages(java.util.List.of(icon));
+        } catch (Exception e) {
+            //
         }
     }
 }
