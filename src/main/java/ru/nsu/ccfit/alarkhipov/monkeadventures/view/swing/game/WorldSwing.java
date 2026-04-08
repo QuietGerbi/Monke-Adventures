@@ -32,7 +32,7 @@ public class WorldSwing extends JPanel {
         setOpaque(true);
         setDoubleBuffered(true);
         ImageIcon icon = new ImageIcon(Objects.requireNonNull(
-                getClass().getResource("/grass.png")));
+                getClass().getResource("/backgrounds/grass.png")));
         backgroundImage = icon.getImage();
     }
 
@@ -256,11 +256,10 @@ public class WorldSwing extends JPanel {
             staffSwing.drawAttackEffect(g2d, centerX, centerY);
         }
 
-        paintHPInfo(g2d);
         paintEnemiesHPInfo(g2d);
-        paintXPInfo(g2d);
-        paintPlayerDamage(g2d);
         paintTime(g2d);
-
+        paintPlayerDamage(g2d);
+        paintHPInfo(g2d);
+        paintXPInfo(g2d);
     }
 }

@@ -7,7 +7,7 @@ import java.util.ArrayList;
 public class Enemy extends Observable<ArrayList<Float>> implements Entity{
     private int curHP=100;
     private float speed=2f;
-    private final int damage = 2;
+    private int damage = 2;
     private float x, y = 0f;
     private float hitboxRadius = 40f;
     private int experienceValue = 20;
@@ -80,6 +80,10 @@ public class Enemy extends Observable<ArrayList<Float>> implements Entity{
 
     public int getDamage() {
         return damage;
+    }
+
+    public void setDamage(int damage) {
+        this.damage = damage;
     }
 
     public void takeDamage(int damage) {

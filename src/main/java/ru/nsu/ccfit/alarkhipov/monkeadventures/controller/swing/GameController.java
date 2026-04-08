@@ -30,7 +30,9 @@ public class GameController implements KeyListener {
     private boolean movingUp, movingDown, movingLeft, movingRight;
     private volatile boolean isRunning = true;
     private int enemyBaseHP = 100;
+    private int enemyBaseDamage = 3;
     private final int HPPerWave = 150;
+    private final int damagePerWave = 5;
     private boolean bossSpawned = false;
     private boolean bossPhase = false;
     private Enemy boss = null;
@@ -50,9 +52,10 @@ public class GameController implements KeyListener {
 
         List<String> levelMusic = List.of("/music/enemy/Kevin MacLeod - Sneaky Snitch.mp3",
                 "/music/enemy/SplinterWolf.mp3", "/music/enemy/Time Lapse by TheFatRat.mp3",
-                "/music/enemy/Xue Hua Piao Piao.mp3", "/music/enemy/Master.mp3");
+                "/music/enemy/Xue Hua Piao Piao.mp3", "/music/enemy/Master.mp3",
+                "/music/enemy/Lesson in the Dark Room.mp3");
         List<String> bossMusic = List.of("/music/boss/Ashes on the Fire.mp3",
-                "/music/boss/Footsteps of Doom.mp3");
+                "/music/boss/Footsteps of Doom.mp3", "/music/boss/AOT.mp3");
 
         startGameLoop();
         soundPad.setPlaylist1(levelMusic, true);
@@ -129,7 +132,6 @@ public class GameController implements KeyListener {
         List<Integer> enemyMaxHPs = new ArrayList<>();
 
         world.update(playerX, playerY);
-        world.updateHPInfo(player.getCurHP(), player.getMaxHP());
 
         long elapsedSeconds = (System.currentTimeMillis() - gameStartTime) / 1000;
         world.updateGameTime(elapsedSeconds);
@@ -148,10 +150,11 @@ public class GameController implements KeyListener {
             enemyMaxHPs.add(100);
         }
 
+        world.updateExpInfo(player.getCurrentExp(), player.getExpToNextLevel());
+        world.updateHPInfo(player.getCurHP(), player.getMaxHP());
+        world.updateDamageInfo(player.getWeapon().getDamage());
         world.updateEnemyPositions(enemyScreenPositions);
         world.updateEnemyHPInfo(enemyHPs, enemyMaxHPs);
-        world.updateExpInfo(player.getCurrentExp(), player.getExpToNextLevel());
-        world.updateDamageInfo(player.getWeapon().getDamage());
     }
 
     private void startEnemySpawning() {
@@ -164,13 +167,14 @@ public class GameController implements KeyListener {
 
         Timer difficultyTimer = new Timer(180000, e -> {
             enemyBaseHP += HPPerWave;
+            enemyBaseDamage += damagePerWave;
             if (spawnInterval > 400) {
                 spawnInterval -= 400;
                 spawnTimer.setDelay(spawnInterval);
             }
         });
 
-        Timer bossTimer = new Timer(1200000, e -> {
+        Timer bossTimer = new Timer(2100000, e -> {
             if (!bossSpawned) {
                 spawnBoss();
             }
@@ -192,7 +196,8 @@ public class GameController implements KeyListener {
 
         Enemy enemy = new Enemy(spawnX, spawnY);
         enemy.setCurHP(enemyBaseHP);
-        EnemySwing enemyView = new EnemySwing(145);
+        enemy.setDamage(enemyBaseDamage);
+        EnemySwing enemyView = new EnemySwing(150);
 
         enemies.add(enemy);
         enemySwings.add(enemyView);
@@ -220,6 +225,7 @@ public class GameController implements KeyListener {
 
         boss = new Enemy(spawnX, spawnY);
         boss.setCurHP(50000);
+        boss.setDamage(20);
         boss.setSpeed(1.0f);
         boss.setHitboxRadius(300);
         boss.setExperienceValue(10000);

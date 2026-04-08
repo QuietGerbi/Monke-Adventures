@@ -23,13 +23,13 @@ public class GameView implements Observer<ArrayList<Float>>  {
         SwingUtilities.invokeLater(() -> {
             frame.setBounds(mainMenuFrame.getX(), mainMenuFrame.getY(),
                     mainMenuFrame.getWidth(), mainMenuFrame.getHeight());
-            frame.setTitle("Monke Adventure");
+            frame.setTitle("Monke Adventures");
             frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
             playerSwing.setOpaque(false);
             worldSwing.setPlayer(playerSwing);
             worldSwing.setStaff(staffSwing);
             frame.add(worldSwing);
-            frame.setResizable(false);
+            frame.setResizable(true);
             frame.setVisible(true);
             worldSwing.update(playerSwing.getX(), playerSwing.getY());
         });

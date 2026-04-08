@@ -26,8 +26,8 @@ public class Player extends Observable<ArrayList<Float>> implements Entity {
 
     private final Weapon weapon = new MagicStaff();
 
-    private final float worldWidth = 8000f;
-    private final float worldHeight = 8000f;
+    private final float worldWidth = 10000f;
+    private final float worldHeight = 10000f;
 
     @Override
     public void setPosition(float newX, float newY){
@@ -71,7 +71,7 @@ public class Player extends Observable<ArrayList<Float>> implements Entity {
         level++;
         expToNextLevel = (int)(expToNextLevel * 1.35);
 
-        weapon.setDamage(weapon.getDamage() + 2);
+        weapon.setDamage(weapon.getDamage() + 4);
 
         maxHP += 25;
         curHP = maxHP;

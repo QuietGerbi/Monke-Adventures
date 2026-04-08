@@ -20,7 +20,12 @@ public class EnemySwing extends JPanel {
                 "/enemies/monkeEn2.png",
                 "/enemies/monkeEn3.png",
                 "/enemies/monkeEn4.png",
-                "/enemies/monkeEn5.png"
+                "/enemies/monkeEn5.png",
+                "/enemies/monkeEn6.png",
+                "/enemies/monkeEn7.png",
+                "/enemies/monkeEn8.png",
+                "/enemies/monkeEn9.png",
+                "/enemies/monkeEn10.png"
         );
 
         String path = enemyTypes.get(ThreadLocalRandom.current().nextInt(enemyTypes.size()));
