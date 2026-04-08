@@ -12,3 +12,10 @@ Monke Adventures — это динамичный 2D-экшен, разработ
     Эпические боссы: Сразитесь с легендарным Monke Boss — боссом, который не прощает ошибок.
 
     Кроссплатформенность: игра доступна для Windows, macOS и Linux в виде готовых инсталляторов.
+
+Music by:
+KOHTA YAMAMOTO
+TheFatRat
+Yi Jian Mei
+Kevin MacLeod
+Jamie Christopherson
