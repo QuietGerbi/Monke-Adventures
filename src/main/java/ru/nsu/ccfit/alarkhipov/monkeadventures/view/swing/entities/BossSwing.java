@@ -15,7 +15,7 @@ public class BossSwing extends EnemySwing {
         loadBossImage();
     }
     public void loadBossImage(){
-        String path = "/enemies/monkeBoss | IluhaKaifiduev.png";
+        String path = "/enemies/monkeBoss.png";
         ImageIcon icon = new ImageIcon(Objects.requireNonNull(getClass().getResource(path)));
         Image original = icon.getImage();
         this.bossImage = original.getScaledInstance(size, size, Image.SCALE_SMOOTH);
