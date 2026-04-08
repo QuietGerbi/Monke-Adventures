@@ -1,0 +1,392 @@
+package ru.nsu.ccfit.alarkhipov.monkeadventures.controller.swing;
+
+import ru.nsu.ccfit.alarkhipov.monkeadventures.ScoreManager;
+import ru.nsu.ccfit.alarkhipov.monkeadventures.model.entities.Enemy;
+import ru.nsu.ccfit.alarkhipov.monkeadventures.model.entities.Player;
+import ru.nsu.ccfit.alarkhipov.monkeadventures.music.SoundPad;
+import ru.nsu.ccfit.alarkhipov.monkeadventures.view.swing.entities.BossSwing;
+import ru.nsu.ccfit.alarkhipov.monkeadventures.view.swing.entities.EnemySwing;
+import ru.nsu.ccfit.alarkhipov.monkeadventures.view.swing.game.GameView;
+import ru.nsu.ccfit.alarkhipov.monkeadventures.view.swing.game.WorldSwing;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.ArrayList;
+import java.util.List;
+
+public class GameController implements KeyListener {
+
+    private final Player player;
+    private final GameView view;
+    private final WorldSwing world;
+
+    private final List<Enemy> enemies = new ArrayList<>();
+    private final List<EnemySwing> enemySwings = new ArrayList<>();
+
+    private final List<Point> enemyScreenPositions = new ArrayList<>();
+
+    private boolean movingUp, movingDown, movingLeft, movingRight;
+    private volatile boolean isRunning = true;
+    private int enemyBaseHP = 100;
+    private final int HPPerWave = 150;
+    private boolean bossSpawned = false;
+    private boolean bossPhase = false;
+    private Enemy boss = null;
+    private int spawnInterval = 3000;
+    private final long gameStartTime = System.currentTimeMillis();
+    final SoundPad soundPad = new SoundPad();
+
+    public GameController(JFrame context) {
+        this.player = new Player();
+        this.view = new GameView(this, context);
+        this.player.addObserver(view);
+        this.world = view.getWorldSwing();
+
+        view.getFrame().addKeyListener(this);
+        view.getFrame().setFocusable(true);
+        view.getFrame().requestFocusInWindow();
+
+        List<String> levelMusic = List.of("/music/enemy/Kevin MacLeod - Sneaky Snitch.mp3",
+                "/music/enemy/SplinterWolf.mp3", "/music/enemy/Time Lapse by TheFatRat.mp3",
+                "/music/enemy/Xue Hua Piao Piao.mp3", "/music/enemy/Master.mp3");
+        List<String> bossMusic = List.of("/music/boss/Ashes on the Fire.mp3",
+                "/music/boss/Footsteps of Doom.mp3");
+
+        startGameLoop();
+        soundPad.setPlaylist1(levelMusic, true);
+        soundPad.setPlaylist2(bossMusic, true);
+        soundPad.start();
+        startEnemySpawning();
+    }
+
+    private void startGameLoop() {
+        Thread gameThread = new Thread(() -> {
+            while (isRunning) {
+                long startTime = System.nanoTime();
+                updatePlayerPosition();
+                updateAllEnemies();
+                checkCollisions();
+                player.getWeapon().attack(player, enemies);
+                removeDeadEnemies();
+                if (player.isDead()){
+                    isRunning=false;
+                    handlePlayerDeath();
+                    break;
+                }
+
+                if (System.currentTimeMillis() - player.getWeapon().getLastAttackTime() < 50) {
+                    SwingUtilities.invokeLater(() -> {view.getStaffSwing().triggerAttack();});
+                }
+                SwingUtilities.invokeLater(this::sendUpdateToView);
+                Toolkit.getDefaultToolkit().sync();
+
+                long timeTaken = System.nanoTime() - startTime;
+                long sleepTime = 16000000 - timeTaken;
+
+                if (sleepTime > 0) {
+                    try {
+                        Thread.sleep(sleepTime / 1000000);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+        });
+
+        gameThread.start();
+    }
+
+    private void updatePlayerPosition() {
+        float speed = player.getCurSpeed();
+        float newX = player.getX();
+        float newY = player.getY();
+
+        boolean moved = false;
+
+        if (movingUp)    { newY -= speed; moved = true; }
+        if (movingDown)  { newY += speed; moved = true; }
+        if (movingLeft)  { newX -= speed; moved = true; }
+        if (movingRight) { newX += speed; moved = true; }
+
+        if (moved) {
+            player.setPosition(newX, newY);
+        }
+    }
+
+    private void updateAllEnemies() {
+        for (Enemy enemy : enemies) {
+            enemy.update(player);
+        }
+    }
+
+    private void sendUpdateToView() {
+        float playerX = player.getX();
+        float playerY = player.getY();
+
+        List<Integer> enemyHPs = new ArrayList<>();
+        List<Integer> enemyMaxHPs = new ArrayList<>();
+
+        world.update(playerX, playerY);
+        world.updateHPInfo(player.getCurHP(), player.getMaxHP());
+
+        long elapsedSeconds = (System.currentTimeMillis() - gameStartTime) / 1000;
+        world.updateGameTime(elapsedSeconds);
+
+        enemyScreenPositions.clear();
+
+        int centerX = world.getWidth() / 2;
+        int centerY = world.getHeight() / 2;
+
+        for (Enemy enemy : enemies) {
+            int screenX = centerX + (int)(enemy.getX() - playerX);
+            int screenY = centerY + (int)(enemy.getY() - playerY);
+            enemyScreenPositions.add(new Point(screenX, screenY));
+
+            enemyHPs.add(enemy.getCurHP());
+            enemyMaxHPs.add(100);
+        }
+
+        world.updateEnemyPositions(enemyScreenPositions);
+        world.updateEnemyHPInfo(enemyHPs, enemyMaxHPs);
+        world.updateExpInfo(player.getCurrentExp(), player.getExpToNextLevel());
+        world.updateDamageInfo(player.getWeapon().getDamage());
+    }
+
+    private void startEnemySpawning() {
+        Timer spawnTimer = new Timer(spawnInterval, e -> {
+            if (!bossPhase) {
+                spawnEnemy();
+            }
+        });
+        spawnTimer.start();
+
+        Timer difficultyTimer = new Timer(180000, e -> {
+            enemyBaseHP += HPPerWave;
+            if (spawnInterval > 400) {
+                spawnInterval -= 400;
+                spawnTimer.setDelay(spawnInterval);
+            }
+        });
+
+        Timer bossTimer = new Timer(1200000, e -> {
+            if (!bossSpawned) {
+                spawnBoss();
+            }
+        });
+
+        difficultyTimer.start();
+        bossTimer.setRepeats(false);
+        bossTimer.start();
+    }
+
+    private void spawnEnemy() {
+        int screenWidth = world.getWidth();
+        int screenHeight = world.getHeight();
+
+        float spawnDistance = Math.max(screenWidth, screenHeight) / 2f + 150;
+        double angle = Math.random() * Math.PI * 2;
+        float spawnX = player.getX() + (float) (Math.cos(angle) * spawnDistance);
+        float spawnY = player.getY() + (float) (Math.sin(angle) * spawnDistance);
+
+        Enemy enemy = new Enemy(spawnX, spawnY);
+        enemy.setCurHP(enemyBaseHP);
+        EnemySwing enemyView = new EnemySwing(145);
+
+        enemies.add(enemy);
+        enemySwings.add(enemyView);
+        world.addEnemy(enemyView);
+    }
+
+    private void spawnBoss() {
+        if (bossSpawned) {
+            return;
+        }
+
+        for (int i = enemies.size() - 1; i >= 0; i--) {
+            world.removeEnemySwing(enemySwings.get(i));
+            enemies.remove(i);
+            enemySwings.remove(i);
+        }
+
+        soundPad.switchToBossMusic();
+
+        double angle = Math.random() * Math.PI * 2;
+        float distance = 600f;
+
+        float spawnX = player.getX() + (float) Math.cos(angle) * distance;
+        float spawnY = player.getY() + (float) Math.sin(angle) * distance;
+
+        boss = new Enemy(spawnX, spawnY);
+        boss.setCurHP(50000);
+        boss.setSpeed(1.0f);
+        boss.setHitboxRadius(300);
+        boss.setExperienceValue(10000);
+
+        BossSwing bossView = new BossSwing(600);
+
+        enemies.add(boss);
+        enemySwings.add(bossView);
+        world.addEnemy(bossView);
+
+        bossSpawned = true;
+        bossPhase = true;
+    }
+
+    private void removeDeadEnemies() {
+        for (int i = enemies.size() - 1; i >= 0; i--) {
+            Enemy enemy = enemies.get(i);
+            if (enemy.isDead()) {
+                player.addExperience(enemy.getExperienceValue());
+
+                if (enemy == boss) {
+                    isRunning = false;
+                    handleBossDeath();
+                }
+
+                if (Math.random() < 0.1) {
+                    player.heal(15);
+                }
+
+                world.removeEnemySwing(enemySwings.get(i));
+                enemies.remove(i);
+                enemySwings.remove(i);
+            }
+        }
+    }
+
+    private void checkCollisions() {
+        for (Enemy enemy : enemies) {
+            if (isColliding(player, enemy)) {
+                player.takeDamage(enemy.getDamage());
+                pushAway(player, enemy);
+            }
+        }
+    }
+
+    private void pushAway(Player p, Enemy e) {
+        float dx = p.getX() - e.getX();
+        float dy = p.getY() - e.getY();
+        float dist = (float) Math.hypot(dx, dy);
+
+        if (dist < 1) return;
+
+        float pushForce = 10f;
+
+        p.setPosition(
+                p.getX() + (dx / dist) * pushForce,
+                p.getY() + (dy / dist) * pushForce
+        );
+    }
+
+    public static boolean isColliding(Player p, Enemy e) {
+        float dx = p.getX() - e.getX();
+        float dy = p.getY() - e.getY();
+        float distance = (float) Math.hypot(dx, dy);
+
+        return distance < (p.getHitboxRadius() + e.getHitboxRadius());
+    }
+
+    private void handlePlayerDeath() {
+        SwingUtilities.invokeLater(() -> {
+            long elapsedSeconds = (System.currentTimeMillis() - gameStartTime) / 1000;
+            ScoreManager sm = new ScoreManager();
+            sm.saveIfHigher(elapsedSeconds);
+
+            String message = "Вы погибли!\n\n" +
+                    "Ваш уровень: " + player.getLevel() + "\n" +
+                    "Время выживания: " + getGameTimeString();
+
+            JOptionPane.showMessageDialog(view.getFrame(),
+                    message,
+                    "Game Over",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            int choice = JOptionPane.showConfirmDialog(view.getFrame(),
+                    "Хотите попробовать снова?",
+                    "Game Over",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (choice == JOptionPane.YES_OPTION) {
+                restartGame();
+            } else {
+                System.exit(0);
+            }
+        });
+    }
+
+    private void handleBossDeath() {
+        SwingUtilities.invokeLater(() -> {
+            String message = "Победа!\n\n" +
+                    "Вы победили босса!\n" +
+                    "Ваш финальный уровень: " + player.getLevel() + "\n" +
+                    "Время игры: " + getGameTimeString();
+
+            JOptionPane.showMessageDialog(view.getFrame(),
+                    message,
+                    "Победа!",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            System.exit(0);
+        });
+    }
+
+    private void restartGame() {
+        SwingUtilities.invokeLater(() -> {
+            view.getFrame().dispose();
+            new GameController(view.getFrame());
+        });
+    }
+
+    private void returnToMainMenu() {
+        this.isRunning = false;
+        soundPad.stopAll();
+
+        SwingUtilities.invokeLater(() -> {
+            view.getFrame().dispose();
+            new MainMenuController();
+        });
+    }
+
+    private String getGameTimeString() {
+        long totalSeconds = (System.currentTimeMillis() - gameStartTime) / 1000;
+        int minutes = (int) (totalSeconds / 60);
+        int seconds = (int) (totalSeconds % 60);
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_W, KeyEvent.VK_UP    -> movingUp = true;
+            case KeyEvent.VK_S, KeyEvent.VK_DOWN  -> movingDown = true;
+            case KeyEvent.VK_A, KeyEvent.VK_LEFT  -> movingLeft = true;
+            case KeyEvent.VK_D, KeyEvent.VK_RIGHT -> movingRight = true;
+            case KeyEvent.VK_B -> {
+                if (!bossSpawned) {
+                    spawnBoss();
+                }
+            }
+            case KeyEvent.VK_M -> {
+                soundPad.toggleMute();
+            }
+            case KeyEvent.VK_ESCAPE -> {
+                returnToMainMenu();
+            }
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_W, KeyEvent.VK_UP    -> movingUp = false;
+            case KeyEvent.VK_S, KeyEvent.VK_DOWN  -> movingDown = false;
+            case KeyEvent.VK_A, KeyEvent.VK_LEFT  -> movingLeft = false;
+            case KeyEvent.VK_D, KeyEvent.VK_RIGHT -> movingRight = false;
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {}
+}

@@ -1,0 +1,55 @@
+name: Build Monke Adventures
+
+on:
+  push:
+    branches: [ "main", "master" ] # Запускать при пуше в эти ветки
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Запускаем три параллельные машины
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+        if: runner.os != 'Windows'
+
+      - name: Build Fat JAR
+        run: ./gradlew fatJar # Та самая задача, которую мы писали в build.gradle
+
+      - name: Package with jpackage
+        shell: bash
+        run: |
+          # Создаем папку для вывода
+          mkdir dist
+          
+          # Запускаем стандартную утилиту упаковки
+          jpackage \
+            --input build/libs \
+            --name "MonkeAdventures" \
+            --main-jar MonkeAdventures-all.jar \
+            --main-class ru.nsu.ccfit.alarkhipov.monkeadventures.Main \
+            --dest dist \
+            --vendor "Alarkhipov" \
+            --app-version "1.0.0"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MonkeAdventures-${{ matrix.os }}
+          path: dist/
+

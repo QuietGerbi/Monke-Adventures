@@ -1,0 +1,28 @@
+package ru.nsu.ccfit.alarkhipov.monkeadventures;
+
+import java.util.prefs.BackingStoreException;
+import java.util.prefs.Preferences;
+
+public class ScoreManager {
+    private static final String BEST_TIME_KEY = "best_time_seconds";
+    private final Preferences prefs = Preferences.userNodeForPackage(ScoreManager.class);
+
+    public void saveIfHigher(long currentSeconds) {
+        long bestSeconds = prefs.getLong(BEST_TIME_KEY, 0);
+        if (currentSeconds > bestSeconds) {
+            prefs.putLong(BEST_TIME_KEY, currentSeconds);
+        }
+        try {
+            prefs.flush();
+        } catch (BackingStoreException e) {
+            //
+        }
+    }
+
+    public String getBestTimeFormatted() {
+        long totalSeconds = prefs.getLong(BEST_TIME_KEY, 0);
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+}
