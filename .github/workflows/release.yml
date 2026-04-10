@@ -3,15 +3,13 @@ name: Build Monke Adventures
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
 
 jobs:
   build:
     name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false # Чтобы падение на одной ОС не отменяло остальные
+      fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
 
@@ -26,37 +24,39 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # WiX Toolset нужен jpackage только на Windows для создания exe/msi
-      - name: Install WiX (Windows only)
-        if: runner.os == 'Windows'
-        run: dotnet tool install --global WiX
-
-      - name: Grant execute permission for gradlew
+      - name: Grant execute permission
         if: runner.os != 'Windows'
         run: chmod +x gradlew
 
       - name: Build Fat JAR
-        # Используем shell: bash везде для единообразия вызова gradlew
-        shell: bash
-        run: ./gradlew fatJar
+        # На Windows сам запуск через ./gradlew может тупить в обычном shell
+        run: ./gradlew fatJar --stacktrace
 
-      - name: Package with jpackage
-        shell: bash
+      - name: Package with jpackage (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          $jarFile = Get-ChildItem -Path build/libs/*.jar | Where-Object { $_.Name -like "*all.jar" } | Select-Object -First 1
+          if (-not $jarFile) { throw "JAR not found!" }
+          
+          jpackage `
+            --type exe `
+            --input build/libs `
+            --name "MonkeAdventures" `
+            --main-jar $($jarFile.Name) `
+            --main-class ru.nsu.ccfit.alarkhipov.monkeadventures.Main `
+            --dest dist `
+            --vendor "Alarkhipov" `
+            --app-version "1.0.0" `
+            --win-shortcut `
+            --win-menu
+
+      - name: Package with jpackage (Unix)
+        if: runner.os != 'Windows'
         run: |
           mkdir -p dist
-          # Ищем JAR, заканчивающийся на all.jar
-          JAR_PATH=$(find build/libs -name "*all.jar" | head -n 1)
-          
-          if [ -z "$JAR_PATH" ]; then
-            echo "Error: Could not find Fat JAR in build/libs/"
-            ls -R build/libs/ # Дамп содержимого для отладки, если не нашел
-            exit 1
-          fi
-          
-          JAR_NAME=$(basename "$JAR_PATH")
-          echo "Found JAR: $JAR_NAME"
-
-          # Базовая команда jpackage
+          JAR_NAME=$(basename $(ls build/libs/*all.jar | head -n 1))
           jpackage \
             --input build/libs \
             --name "MonkeAdventures" \
@@ -64,8 +64,7 @@ jobs:
             --main-class ru.nsu.ccfit.alarkhipov.monkeadventures.Main \
             --dest dist \
             --vendor "Alarkhipov" \
-            --app-version "1.0.0" \
-            --verbose
+            --app-version "1.0.0"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
