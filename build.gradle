@@ -47,6 +47,14 @@ repositories {
     mavenCentral()
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(ProcessResources).configureEach {
+    filteringCharset = 'UTF-8'
+}
+
 dependencies {
     implementation 'org.apache.logging.log4j:log4j-api:2.25.3'
     implementation 'org.apache.logging.log4j:log4j-core:2.25.3'
