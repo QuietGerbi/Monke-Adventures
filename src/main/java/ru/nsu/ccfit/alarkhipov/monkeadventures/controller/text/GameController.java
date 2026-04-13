@@ -278,7 +278,7 @@ public class GameController {
                 player.setPosition(newX, newY);
             }
 
-        } catch (Exception _) {
+        } catch (Exception e) {
             log.info("Input error");
         }
     }

@@ -18,7 +18,7 @@ public class ScoreManager {
         }
         try {
             prefs.flush();
-        } catch (BackingStoreException _) {
+        } catch (BackingStoreException e) {
             log.info("Something went wrong with saving stats of the game");
         }
     }

@@ -94,7 +94,7 @@ public class GameController implements KeyListener {
                 if (sleepTime > 0) {
                     try {
                         Thread.sleep(sleepTime / 1_000_000);
-                    } catch (InterruptedException _) {
+                    } catch (Exception e) {
                         Thread.currentThread().interrupt();
                         log.info("Thread was interrupted");
                     }

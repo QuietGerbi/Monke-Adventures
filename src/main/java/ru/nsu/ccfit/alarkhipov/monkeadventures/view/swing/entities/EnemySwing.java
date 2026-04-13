@@ -41,16 +41,6 @@ public class EnemySwing extends JPanel {
         setDoubleBuffered(true);
     }
 
-    public void startDeathAnimation() {
-        isDying = true;
-        deathStartTime = System.currentTimeMillis();
-        repaint();
-    }
-
-    public boolean isDying() {
-        return isDying;
-    }
-
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
